@@ -1,0 +1,1 @@
+import{s}from"./index-qXjx5w46.js";const n=t=>s.get("/students",{params:t}),d=t=>s.post("/students",t),o=t=>s.delete(`/students/${t}`),p=t=>s.post("/students/import",t,{headers:{"Content-Type":"multipart/form-data"}});export{o as d,p as i,n as l,d as s};

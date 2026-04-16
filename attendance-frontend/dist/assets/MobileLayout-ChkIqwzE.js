@@ -1,0 +1,1 @@
+import{_ as o,c as t,d as c,r,o as s}from"./index-qXjx5w46.js";const n={},a={class:"mobile-layout"};function _(i,l){const e=r("router-view");return s(),t("div",a,[c(e)])}const m=o(n,[["render",_]]);export{m as default};
