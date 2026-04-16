@@ -1,1 +1,0 @@
-import{s as a}from"./index-qXjx5w46.js";const n=()=>a.get("/plans"),e=s=>a.get(`/plans/${s}`),p=s=>a.post("/plans",s),i=(s,t)=>a.put(`/plans/${s}/status`,null,{params:{status:t}}),o=s=>a.delete(`/plans/${s}`);export{i as c,o as d,e as g,n as l,p as s};

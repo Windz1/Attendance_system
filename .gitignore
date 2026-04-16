@@ -1,0 +1,14 @@
+# IDEA
+.idea/
+*.iml
+
+# Java
+target/
+*.log
+
+# Node
+node_modules/
+dist/
+
+# OS
+.DS_Store
