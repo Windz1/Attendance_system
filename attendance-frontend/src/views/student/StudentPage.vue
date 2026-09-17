@@ -58,9 +58,10 @@
           <div class="toolbar-header">
             <div>
               <el-button type="primary" @click="openDialog()">新增学生</el-button>
-              <el-upload :show-file-list="false" :http-request="uploadFile" style="display:inline-block;margin-left:8px">
+              <el-upload accept=".xlsx" :show-file-list="false" :http-request="uploadFile" style="display:inline-block;margin-left:8px">
                 <el-button type="success">导入xlsx</el-button>
               </el-upload>
+              <el-button style="margin-left:8px" @click="downloadTemplate">下载导入模板</el-button>
               <el-button type="danger" plain style="margin-left:8px" @click="openTurnoverDialog">批量删除</el-button>
               <el-select v-model="importMode" style="width:160px;margin-left:8px">
                 <el-option :value="1" label="导入跳过重复" />
@@ -72,6 +73,10 @@
             </div>
           </div>
         </template>
+
+        <div style="margin-bottom: 12px; color: #606266; font-size: 13px">
+          导入文件须包含“学号、姓名、班级”表头；性别、年级、学院、专业、手机号、状态可选，列顺序不限。
+        </div>
 
         <el-table :data="displayList" border>
           <el-table-column type="selection" width="46" />
@@ -162,7 +167,7 @@ import dayjs from 'dayjs'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listClassesApi } from '../../api/class'
-import { deleteStudentApi, importStudentsApi, listStudentsApi, saveStudentApi } from '../../api/student'
+import { deleteStudentApi, downloadStudentTemplateApi, importStudentsApi, listStudentsApi, saveStudentApi } from '../../api/student'
 import { recordRetentionPolicyApi, turnoverResetApi } from '../../api/system'
 
 const importMode = ref(2)
@@ -307,6 +312,18 @@ const uploadFile = async (opt) => {
   const msg = await importStudentsApi(fd)
   ElMessage.success(msg)
   await Promise.all([load(), loadClasses()])
+}
+
+const downloadTemplate = async () => {
+  const blob = await downloadStudentTemplateApi()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = '学生导入模板.xlsx'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
 }
 
 const openTurnoverDialog = () => {

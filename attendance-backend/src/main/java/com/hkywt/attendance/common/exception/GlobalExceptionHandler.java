@@ -3,7 +3,6 @@ package com.hkywt.attendance.common.exception;
 import com.hkywt.attendance.common.model.ApiResult;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.core.NestedExceptionUtils;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -31,10 +30,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ApiResult<Void> handleEx(Exception e) {
         log.error("Unhandled exception", e);
-        Throwable root = NestedExceptionUtils.getMostSpecificCause(e);
-        String detail = (root != null && root.getMessage() != null && !root.getMessage().isBlank())
-                ? root.getMessage()
-                : (e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
-        return ApiResult.fail(500, "系统异常:" + detail);
+        return ApiResult.fail(500, "系统异常，请联系管理员");
     }
 }

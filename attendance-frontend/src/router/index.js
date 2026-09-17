@@ -32,7 +32,8 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // 读取 Vite 的 base 配置，生产环境路由会保留 /attendance/ 前缀。
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 

@@ -45,7 +45,7 @@
           <el-col :span="12"><el-form-item label="账号" required><el-input v-model="form.username" :disabled="!!form.userId" /></el-form-item></el-col>
         </el-row>
         <el-row :gutter="12" v-if="!form.userId">
-          <el-col :span="12"><el-form-item label="初始密码" required><el-input v-model="form.password" /></el-form-item></el-col>
+          <el-col :span="12"><el-form-item label="初始密码" required><el-input v-model="form.password" type="password" show-password placeholder="至少10位" /></el-form-item></el-col>
           <el-col :span="12"><el-form-item label="手机号"><el-input v-model="form.phone" /></el-form-item></el-col>
         </el-row>
         <el-row :gutter="12" v-else>
@@ -68,7 +68,7 @@
 
     <el-dialog v-model="importDialogVisible" title="从学生导入部员" width="900px">
       <el-alert
-        title="默认账号=学号，默认密码=学号；负责班级自动绑定为该学生所在班级。"
+        title="账号默认为学号，系统将为每人生成独立随机密码；负责班级自动绑定为该学生所在班级。"
         type="info"
         :closable="false"
         style="margin-bottom: 12px"
@@ -121,7 +121,7 @@ const studentKeyword = ref('')
 const studentClassId = ref(undefined)
 const studentList = ref([])
 const selectedStudentIds = ref([])
-const form = reactive({ userId: null, realName: '', username: '', password: '123456', phone: '', status: 1, classIds: [] })
+const form = reactive({ userId: null, realName: '', username: '', password: '', phone: '', status: 1, classIds: [] })
 
 const classNameMap = computed(() => {
   const map = {}
@@ -135,7 +135,7 @@ const resetForm = () => {
   form.userId = null
   form.realName = ''
   form.username = ''
-  form.password = '123456'
+  form.password = ''
   form.phone = ''
   form.status = 1
   form.classIds = []
@@ -177,6 +177,7 @@ const onStudentSelectionChange = (rows) => {
 
 const submit = async () => {
   if (!form.classIds.length) return ElMessage.warning('请选择负责班级')
+  if (!form.userId && (form.password || '').length < 10) return ElMessage.warning('初始密码至少需要10位')
   if (form.userId) {
     await updateMemberApi({ userId: form.userId, realName: form.realName, phone: form.phone, status: form.status, classIds: form.classIds })
   } else {
@@ -198,8 +199,15 @@ const importFromStudents = async () => {
 }
 
 const resetPwd = async (row) => {
-  await ElMessageBox.confirm(`重置【${row.realName}】密码为 123456 ？`, '提示', { type: 'warning' })
-  await resetMemberPwdApi(row.id, { newPassword: '123456' })
+  const { value } = await ElMessageBox.prompt(`请输入【${row.realName}】的新密码`, '重置密码', {
+    inputType: 'password',
+    inputPlaceholder: '至少10位',
+    inputPattern: /^.{10,72}$/,
+    inputErrorMessage: '密码长度必须为10到72位',
+    confirmButtonText: '确认重置',
+    cancelButtonText: '取消'
+  })
+  await resetMemberPwdApi(row.id, { newPassword: value })
   ElMessage.success('重置成功')
 }
 

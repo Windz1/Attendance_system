@@ -23,14 +23,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashSet;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.security.SecureRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class MemberServiceImpl implements MemberService {
+
+    private static final String TEMP_PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
@@ -109,6 +114,7 @@ public class MemberServiceImpl implements MemberService {
         int recovered = 0;
         int skippedExists = 0;
         int skippedInvalid = 0;
+        List<String> temporaryCredentials = new ArrayList<>();
         Long operator = SecurityUtil.currentUserId();
 
         for (Long studentId : targetIds) {
@@ -127,13 +133,14 @@ public class MemberServiceImpl implements MemberService {
             }
 
             Long userId;
+            String temporaryPassword = generateTemporaryPassword();
             if (existing != null) {
                 existing.setDeleted(0);
                 existing.setStatus(1);
                 existing.setUserType(2);
                 existing.setRealName(student.getStudentName());
                 existing.setPhone(student.getPhone());
-                existing.setPasswordHash(passwordEncoder.encode(student.getStudentNo()));
+                existing.setPasswordHash(passwordEncoder.encode(temporaryPassword));
                 existing.setUpdateBy(operator);
                 userMapper.updateById(existing);
                 userId = existing.getId();
@@ -141,7 +148,7 @@ public class MemberServiceImpl implements MemberService {
             } else {
                 SysUser user = new SysUser();
                 user.setUsername(student.getStudentNo());
-                user.setPasswordHash(passwordEncoder.encode(student.getStudentNo()));
+                user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
                 user.setRealName(student.getStudentName());
                 user.setPhone(student.getPhone());
                 user.setStatus(1);
@@ -151,11 +158,14 @@ public class MemberServiceImpl implements MemberService {
                 userId = user.getId();
                 created++;
             }
+            temporaryCredentials.add(student.getStudentNo() + "/" + temporaryPassword);
 
             ensureMemberRole(userId, memberRole.getId());
             syncMemberClasses(userId, List.of(student.getClassId()));
         }
-        return "导入完成：新增" + created + "人，恢复" + recovered + "人，已存在跳过" + skippedExists + "人，无效数据跳过" + skippedInvalid + "人。默认账号=学号，默认密码=学号。";
+        String summary = "导入完成：新增" + created + "人，恢复" + recovered + "人，已存在跳过" + skippedExists + "人，无效数据跳过" + skippedInvalid + "人。";
+        if (temporaryCredentials.isEmpty()) return summary;
+        return summary + "临时账号/密码：" + String.join("，", temporaryCredentials) + "。请通过安全渠道分别告知本人。";
     }
 
     @Override
@@ -253,5 +263,13 @@ public class MemberServiceImpl implements MemberService {
             exists.setDeleted(0);
             userRoleMapper.updateById(exists);
         }
+    }
+
+    private String generateTemporaryPassword() {
+        StringBuilder password = new StringBuilder(16);
+        for (int i = 0; i < 16; i++) {
+            password.append(TEMP_PASSWORD_CHARS.charAt(SECURE_RANDOM.nextInt(TEMP_PASSWORD_CHARS.length())));
+        }
+        return password.toString();
     }
 }

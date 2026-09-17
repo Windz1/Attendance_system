@@ -5,6 +5,7 @@ import com.hkywt.attendance.module.student.dto.StudentSaveRequest;
 import com.hkywt.attendance.module.student.entity.BizStudent;
 import com.hkywt.attendance.module.student.service.StudentService;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -42,5 +43,10 @@ public class StudentController {
     public ApiResult<String> importXlsx(@RequestParam("file") MultipartFile file,
                                         @RequestParam(defaultValue = "1") Integer importMode) {
         return ApiResult.success(studentService.importXlsx(file, importMode));
+    }
+
+    @GetMapping("/import-template")
+    public void downloadImportTemplate(HttpServletResponse response) {
+        studentService.downloadImportTemplate(response);
     }
 }

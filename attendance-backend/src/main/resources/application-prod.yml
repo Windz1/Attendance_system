@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 40MB
+
+attendance:
+  class-photo:
+    root-dir: /www/wwwroot/attendance_backend/uploads/class-photos
+    retention-days: 30
+    cleanup-cron: "0 20 3 1 * ?"
+
+security:
+  require-https: ${REQUIRE_HTTPS:false}
+  jwt:
+    secret: ${JWT_SECRET}

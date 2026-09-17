@@ -2,6 +2,8 @@ package com.hkywt.attendance.module.record.service.impl;
 
 import com.alibaba.excel.EasyExcel;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hkywt.attendance.common.security.SecurityUtil;
 import com.hkywt.attendance.module.clazz.entity.BizClass;
 import com.hkywt.attendance.module.clazz.mapper.BizClassMapper;
@@ -36,6 +38,7 @@ import java.util.stream.Collectors;
 public class RecordServiceImpl implements RecordService {
 
     private static final DateTimeFormatter DATE_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final BizAttendanceRecordMapper recordMapper;
     private final BizMemberClassMapper memberClassMapper;
@@ -179,6 +182,7 @@ public class RecordServiceImpl implements RecordService {
         vo.setStudentId(r.getStudentId());
         vo.setPlanName(plan == null ? "-" : valueOrDash(plan.getPlanName()));
         vo.setClassName(clazz == null ? "ID:" + r.getClassId() : valueOrDash(clazz.getClassName()));
+        vo.setClassPhotoUrls(parseClassPhotoUrls(r.getClassPhotoUrl()));
         vo.setWindowStartAt(task == null ? null : task.getWindowStartAt());
         vo.setWindowEndAt(task == null ? null : task.getWindowEndAt());
         vo.setSubmittedAt(task == null ? null : task.getSubmittedAt());
@@ -254,5 +258,23 @@ public class RecordServiceImpl implements RecordService {
             case 4 -> "旷课";
             default -> "未知";
         };
+    }
+
+    private List<String> parseClassPhotoUrls(String value) {
+        if (value == null || value.isBlank()) return List.of();
+        String trim = value.trim();
+        if (trim.startsWith("[") && trim.endsWith("]")) {
+            try {
+                List<String> list = OBJECT_MAPPER.readValue(trim, new TypeReference<List<String>>() {});
+                return list.stream()
+                        .map(v -> v == null ? "" : v.trim())
+                        .filter(v -> !v.isBlank())
+                        .distinct()
+                        .toList();
+            } catch (Exception ignored) {
+                return List.of();
+            }
+        }
+        return List.of(trim);
     }
 }

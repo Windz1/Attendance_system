@@ -4,13 +4,13 @@ import com.hkywt.attendance.common.model.ApiResult;
 import com.hkywt.attendance.module.system.dto.MemberCreateRequest;
 import com.hkywt.attendance.module.system.dto.MemberImportFromStudentsRequest;
 import com.hkywt.attendance.module.system.dto.MemberUpdateRequest;
+import com.hkywt.attendance.module.system.dto.PasswordResetRequest;
 import com.hkywt.attendance.module.system.entity.SysUser;
 import com.hkywt.attendance.module.system.service.MemberService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/members")
@@ -40,8 +40,8 @@ public class MemberController {
     }
 
     @PutMapping("/{userId}/reset-password")
-    public ApiResult<Void> resetPassword(@PathVariable Long userId, @RequestBody Map<String, String> body) {
-        memberService.resetPassword(userId, body.getOrDefault("newPassword", "123456"));
+    public ApiResult<Void> resetPassword(@PathVariable Long userId, @Valid @RequestBody PasswordResetRequest request) {
+        memberService.resetPassword(userId, request.getNewPassword());
         return ApiResult.success();
     }
 

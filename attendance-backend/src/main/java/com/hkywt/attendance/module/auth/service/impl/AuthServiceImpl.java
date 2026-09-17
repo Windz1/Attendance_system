@@ -6,6 +6,7 @@ import com.hkywt.attendance.common.util.JwtUtil;
 import com.hkywt.attendance.module.auth.dto.LoginRequest;
 import com.hkywt.attendance.module.auth.service.AuthService;
 import com.hkywt.attendance.module.auth.vo.LoginVO;
+import com.hkywt.attendance.module.auth.service.LoginAttemptService;
 import com.hkywt.attendance.module.shared.enums.RoleCode;
 import com.hkywt.attendance.module.system.entity.SysUser;
 import com.hkywt.attendance.module.system.mapper.SysRoleMapper;
@@ -25,23 +26,33 @@ public class AuthServiceImpl implements AuthService {
     private final SysRoleMapper roleMapper;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final LoginAttemptService loginAttemptService;
 
-    public AuthServiceImpl(SysUserMapper userMapper, SysRoleMapper roleMapper, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public AuthServiceImpl(SysUserMapper userMapper,
+                           SysRoleMapper roleMapper,
+                           PasswordEncoder passwordEncoder,
+                           JwtUtil jwtUtil,
+                           LoginAttemptService loginAttemptService) {
         this.userMapper = userMapper;
         this.roleMapper = roleMapper;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.loginAttemptService = loginAttemptService;
     }
 
     @Override
-    public LoginVO login(LoginRequest request) {
+    public LoginVO login(LoginRequest request, String clientAddress) {
+        String attemptKey = loginAttemptService.key(request.getUsername(), clientAddress);
+        loginAttemptService.assertAllowed(attemptKey);
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUsername, request.getUsername())
                 .eq(SysUser::getDeleted, 0)
                 .last("limit 1"));
         if (user == null || user.getStatus() == 0 || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            loginAttemptService.recordFailure(attemptKey);
             throw new BizException(401, "账号或密码错误");
         }
+        loginAttemptService.recordSuccess(attemptKey);
 
         List<String> roleList = roleMapper.findRoleCodesByUserId(user.getId());
         Set<String> roles = roleList.stream().collect(Collectors.toSet());

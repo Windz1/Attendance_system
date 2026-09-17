@@ -96,6 +96,24 @@
         <el-table :data="list" border height="680">
           <el-table-column prop="planName" label="计划名称" min-width="160" />
           <el-table-column prop="className" label="班级" min-width="120" />
+          <el-table-column prop="classPhotoUrls" label="班级照片" min-width="170">
+            <template #default="{ row }">
+              <div v-if="row.classPhotoUrls?.length" class="record-photos">
+                <el-image
+                  v-for="(url, idx) in row.classPhotoUrls.slice(0, 3)"
+                  :key="`${url}-${idx}`"
+                  :src="photoUrl(url)"
+                  :preview-src-list="row.classPhotoUrls.map(photoUrl)"
+                  :initial-index="idx"
+                  fit="cover"
+                  class="record-photo-item"
+                  preview-teleported
+                />
+                <span v-if="row.classPhotoUrls.length > 3" class="photo-more">+{{ row.classPhotoUrls.length - 3 }}</span>
+              </div>
+              <span v-else>-</span>
+            </template>
+          </el-table-column>
           <el-table-column prop="windowStartAt" label="窗口开始" min-width="160">
             <template #default="{ row }">{{ formatDateTime(row.windowStartAt) }}</template>
           </el-table-column>
@@ -118,10 +136,11 @@
 
 <script setup>
 import dayjs from 'dayjs'
-import { onMounted, reactive, ref } from 'vue'
+import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { listClassesApi } from '../../api/class'
 import { listPlansApi } from '../../api/plan'
 import { exportRecordsApi, listRecordsApi } from '../../api/record'
+import { loadClassPhotoApi } from '../../api/task'
 
 const list = ref([])
 const plans = ref([])
@@ -130,6 +149,7 @@ const timeRange = ref([
   dayjs().subtract(6, 'day').startOf('day').format('YYYY-MM-DD HH:mm:ss'),
   dayjs().endOf('day').format('YYYY-MM-DD HH:mm:ss')
 ])
+const photoObjectUrls = ref({})
 
 const filters = reactive({
   planId: undefined,
@@ -161,8 +181,30 @@ const formatDateTime = (val) => {
   return dayjs(val).format('YYYY-MM-DD HH:mm:ss')
 }
 
+const photoUrl = (url) => photoObjectUrls.value[url] || ''
+
+const clearPhotoObjectUrls = () => {
+  Object.values(photoObjectUrls.value).forEach((url) => URL.revokeObjectURL(url))
+  photoObjectUrls.value = {}
+}
+
+const loadPhotoObjectUrls = async () => {
+  clearPhotoObjectUrls()
+  const urls = [...new Set((list.value || []).flatMap((row) => row.classPhotoUrls || []))]
+  const entries = await Promise.all(urls.map(async (url) => {
+    try {
+      const blob = await loadClassPhotoApi(url)
+      return [url, URL.createObjectURL(blob)]
+    } catch (_) {
+      return [url, '']
+    }
+  }))
+  photoObjectUrls.value = Object.fromEntries(entries)
+}
+
 const load = async () => {
   list.value = await listRecordsApi(buildParams())
+  await loadPhotoObjectUrls()
 }
 
 const onExport = async () => {
@@ -196,6 +238,7 @@ onMounted(async () => {
   classes.value = classList || []
   await load()
 })
+onBeforeUnmount(clearPhotoObjectUrls)
 </script>
 
 <style scoped>
@@ -209,5 +252,23 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.record-photos {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.record-photo-item {
+  width: 44px;
+  height: 32px;
+  border-radius: 4px;
+  border: 1px solid #dcdfe6;
+}
+
+.photo-more {
+  color: #606266;
+  font-size: 12px;
 }
 </style>

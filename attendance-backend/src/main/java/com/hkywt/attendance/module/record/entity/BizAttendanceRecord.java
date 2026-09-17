@@ -17,6 +17,7 @@ public class BizAttendanceRecord {
     private Integer attendanceStatus;
     private Integer isDefaultMarked;
     private String remark;
+    private String classPhotoUrl;
     private Long operatorUserId;
     private LocalDateTime operateTime;
     @TableLogic

@@ -41,7 +41,7 @@ public class AttendanceTaskScheduler {
         this.recordMapper = recordMapper;
     }
 
-    @Scheduled(cron = "0 */5 * * * ?")
+    @Scheduled(cron = "0 */5 * * * ?", zone = "${attendance.timezone:Asia/Shanghai}")
     public void generateTodayTasks() {
         generateTasksForDate(LocalDate.now());
     }
@@ -91,7 +91,7 @@ public class AttendanceTaskScheduler {
         if (created > 0) log.info("Generated attendance tasks count={}", created);
     }
 
-    @Scheduled(cron = "0 */2 * * * ?")
+    @Scheduled(cron = "0 */2 * * * ?", zone = "${attendance.timezone:Asia/Shanghai}")
     public void expireTimeoutTasks() {
         LocalDateTime now = LocalDateTime.now();
         taskMapper.update(null, new LambdaUpdateWrapper<BizAttendanceTask>()
@@ -104,7 +104,7 @@ public class AttendanceTaskScheduler {
     /**
      * 每天凌晨清理一个月前的考勤记录，避免表数据无限增长
      */
-    @Scheduled(cron = "0 10 3 * * ?")
+    @Scheduled(cron = "0 10 3 * * ?", zone = "${attendance.timezone:Asia/Shanghai}")
     public void cleanupOldRecords() {
         LocalDateTime cutoff = LocalDateTime.now().minusMonths(1);
         int deleted = recordMapper.physicalDeleteBefore(cutoff);

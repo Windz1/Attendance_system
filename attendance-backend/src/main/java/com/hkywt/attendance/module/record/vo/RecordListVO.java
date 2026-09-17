@@ -3,6 +3,7 @@ package com.hkywt.attendance.module.record.vo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class RecordListVO {
@@ -13,6 +14,7 @@ public class RecordListVO {
 
     private String planName;
     private String className;
+    private List<String> classPhotoUrls;
     private LocalDateTime windowStartAt;
     private LocalDateTime windowEndAt;
     private LocalDateTime submittedAt;

@@ -171,6 +171,7 @@ CREATE TABLE biz_attendance_record (
   attendance_status TINYINT NOT NULL,
   is_default_marked TINYINT NOT NULL DEFAULT 0,
   remark VARCHAR(255) DEFAULT NULL,
+  class_photo_url TEXT DEFAULT NULL,
   operator_user_id BIGINT NOT NULL,
   operate_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted TINYINT NOT NULL DEFAULT 0,
@@ -180,8 +181,4 @@ CREATE TABLE biz_attendance_record (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 INSERT INTO sys_role(role_code, role_name, status) VALUES ('ADMIN', '部长', 1), ('MEMBER', '部员', 1);
--- 默认部长账号: admin / 123456 (BCrypt)
-INSERT INTO sys_user(username, password_hash, real_name, user_type, status)
-VALUES ('admin', '$2a$10$9fYS5MAQ5A3t.rjvQj1YIuY8voQf9IY9r/fzLGLW4M1jSLq5w3hM6', '系统部长', 1, 1);
-INSERT INTO sys_user_role(user_id, role_id)
-SELECT u.id, r.id FROM sys_user u, sys_role r WHERE u.username='admin' AND r.role_code='ADMIN';
+-- 管理员不再使用公开默认密码创建。首次启动前请设置 BOOTSTRAP_ADMIN_PASSWORD（至少10位）。

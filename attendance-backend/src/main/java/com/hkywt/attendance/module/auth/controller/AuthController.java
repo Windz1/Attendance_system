@@ -5,6 +5,7 @@ import com.hkywt.attendance.common.security.SecurityUtil;
 import com.hkywt.attendance.module.auth.dto.LoginRequest;
 import com.hkywt.attendance.module.auth.service.AuthService;
 import com.hkywt.attendance.module.auth.vo.LoginVO;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,8 +23,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResult<LoginVO> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResult.success(authService.login(request));
+    public ApiResult<LoginVO> login(@Valid @RequestBody LoginRequest request, HttpServletRequest servletRequest) {
+        return ApiResult.success(authService.login(request, servletRequest.getRemoteAddr()));
     }
 
     @GetMapping("/me")

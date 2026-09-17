@@ -1,6 +1,9 @@
 package com.hkywt.attendance.common.security;
 
 import com.hkywt.attendance.common.util.JwtUtil;
+import com.hkywt.attendance.module.system.entity.SysUser;
+import com.hkywt.attendance.module.system.mapper.SysRoleMapper;
+import com.hkywt.attendance.module.system.mapper.SysUserMapper;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -8,13 +11,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -22,9 +26,13 @@ import java.util.stream.Collectors;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final SysUserMapper userMapper;
+    private final SysRoleMapper roleMapper;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, SysUserMapper userMapper, SysRoleMapper roleMapper) {
         this.jwtUtil = jwtUtil;
+        this.userMapper = userMapper;
+        this.roleMapper = roleMapper;
     }
 
     @Override
@@ -35,17 +43,26 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtUtil.parseToken(token);
                 Long userId = Long.valueOf(String.valueOf(claims.get("userId")));
-                @SuppressWarnings("unchecked")
-                Set<String> roles = claims.get("roles") == null ? Collections.emptySet() : ((java.util.List<String>) claims.get("roles")).stream().collect(Collectors.toSet());
-                Integer userType = claims.get("userType") == null ? null : Integer.valueOf(String.valueOf(claims.get("userType")));
+                SysUser dbUser = userMapper.selectById(userId);
+                if (dbUser == null || Integer.valueOf(1).equals(dbUser.getDeleted()) || !Integer.valueOf(1).equals(dbUser.getStatus())) {
+                    throw new IllegalArgumentException("inactive user");
+                }
+                if (!dbUser.getUsername().equals(claims.getSubject())) {
+                    throw new IllegalArgumentException("token subject mismatch");
+                }
+                List<String> roleList = roleMapper.findRoleCodesByUserId(userId);
+                Set<String> roles = roleList.stream().collect(Collectors.toSet());
                 SecurityUser user = SecurityUser.builder()
                         .userId(userId)
-                        .username(claims.getSubject())
-                        .realName((String) claims.get("realName"))
-                        .userType(userType)
+                        .username(dbUser.getUsername())
+                        .realName(dbUser.getRealName())
+                        .userType(dbUser.getUserType())
                         .roles(roles)
                         .build();
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(user, null, Collections.emptyList());
+                List<SimpleGrantedAuthority> authorities = roleList.stream()
+                        .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                        .toList();
+                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(user, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (Exception ignored) {

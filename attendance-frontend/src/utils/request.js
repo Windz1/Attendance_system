@@ -2,7 +2,8 @@ import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
 const service = axios.create({
-  baseURL: '/api',
+  // 开发环境为 /api；构建后为 /attendance/api，避免与同域其他系统冲突。
+  baseURL: `${import.meta.env.BASE_URL}api`,
   timeout: 15000
 })
 

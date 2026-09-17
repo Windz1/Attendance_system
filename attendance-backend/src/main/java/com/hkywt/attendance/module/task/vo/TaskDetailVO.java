@@ -14,6 +14,7 @@ public class TaskDetailVO {
     private Long planId;
     private Integer taskStatus;
     private Integer allowModify;
+    private List<String> classPhotoUrls;
     private LocalDate taskDate;
     private LocalDateTime windowStartAt;
     private LocalDateTime windowEndAt;

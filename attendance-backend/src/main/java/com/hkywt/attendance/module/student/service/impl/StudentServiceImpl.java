@@ -16,12 +16,16 @@ import com.hkywt.attendance.module.student.entity.BizStudentImportLog;
 import com.hkywt.attendance.module.student.mapper.BizStudentImportLogMapper;
 import com.hkywt.attendance.module.student.mapper.BizStudentMapper;
 import com.hkywt.attendance.module.student.service.StudentService;
+import com.hkywt.attendance.module.student.service.StudentImportParser;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 @Service
@@ -85,19 +89,35 @@ public class StudentServiceImpl implements StudentService {
     }
 
     @Override
+    public void downloadImportTemplate(HttpServletResponse response) {
+        checkAdmin();
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setCharacterEncoding("UTF-8");
+        response.setHeader("Content-Disposition", "attachment; filename*=UTF-8''" +
+                URLEncoder.encode("学生导入模板.xlsx", StandardCharsets.UTF_8));
+        List<List<String>> headers = List.of("学号", "姓名", "性别", "年级", "学院", "专业", "班级", "手机号", "状态")
+                .stream().map(List::of).toList();
+        try {
+            EasyExcel.write(response.getOutputStream()).head(headers).sheet("学生导入模板").doWrite(Collections.emptyList());
+        } catch (IOException e) {
+            throw new BizException("生成导入模板失败");
+        }
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public String importXlsx(MultipartFile file, Integer importMode) {
         checkAdmin();
         if (file == null || file.isEmpty()) {
             throw new BizException("导入文件不能为空");
         }
-        if (!Objects.requireNonNull(file.getOriginalFilename()).endsWith(".xlsx")) {
+        if (file.getOriginalFilename() == null || !file.getOriginalFilename().toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
             throw new BizException("仅支持xlsx文件");
         }
 
         List<StudentImportRow> rows;
         try {
-            rows = EasyExcel.read(file.getInputStream()).head(StudentImportRow.class).sheet().doReadSync();
+            rows = new StudentImportParser().parse(file.getInputStream());
         } catch (IOException e) {
             throw new BizException("读取Excel失败:" + e.getMessage());
         }
@@ -107,6 +127,7 @@ public class StudentServiceImpl implements StudentService {
         int fail = 0;
         Map<String, Long> classCodeMap = new HashMap<>();
         Map<String, Long> classNameMap = new HashMap<>();
+        Set<String> seenStudentNos = new HashSet<>();
         classMapper.selectList(new LambdaQueryWrapper<BizClass>().eq(BizClass::getDeleted, 0))
                 .forEach(v -> {
                     classCodeMap.put(v.getClassCode(), v.getId());
@@ -117,6 +138,10 @@ public class StudentServiceImpl implements StudentService {
             if (row.getStudentNo() == null || row.getStudentNo().isBlank()
                     || row.getStudentName() == null || row.getStudentName().isBlank()
                     || row.getClassName() == null || row.getClassName().isBlank()) {
+                fail++;
+                continue;
+            }
+            if (!seenStudentNos.add(row.getStudentNo())) {
                 fail++;
                 continue;
             }
